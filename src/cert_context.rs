@@ -48,12 +48,19 @@ impl CertContext {
         unsafe {
             assert!(pem.len() <= winapi::DWORD::max_value() as usize);
 
-            // the docs claim that you can pass null as the out pointer and
-            // it'll tell you the required size but that is apparently not the
-            // case. Since we're decoding, the output will always be shorter
-            // the input.
+            let mut len = 0;
+            let ok = crypt32::CryptStringToBinaryA(pem.as_ptr() as winapi::LPCSTR,
+                                                   pem.len() as winapi::DWORD,
+                                                   CRYPT_STRING_BASE64HEADER,
+                                                   ptr::null_mut(),
+                                                   &mut len,
+                                                   ptr::null_mut(),
+                                                   ptr::null_mut());
+            if ok != winapi::TRUE {
+                return Err(io::Error::last_os_error());
+            }
+            assert!(len > 0);
             let mut buf = vec![0; pem.len()];
-            let mut len = buf.len() as winapi::DWORD;
             let ok = crypt32::CryptStringToBinaryA(pem.as_ptr() as winapi::LPCSTR,
                                                    pem.len() as winapi::DWORD,
                                                    CRYPT_STRING_BASE64HEADER,
