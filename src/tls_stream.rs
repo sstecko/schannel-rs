@@ -532,11 +532,7 @@ impl<S> TlsStream<S>
         };
 
         let cert_chain = unsafe {
-            let cert_store = self.cert_store
-                .as_ref()
-                .map(|s| s.as_inner())
-                .unwrap_or(ptr::null_mut());
-
+            let cert_store = (*cert_context.as_inner()).hCertStore;
             let flags = winapi::CERT_CHAIN_CACHE_END_CERT |
                         winapi::CERT_CHAIN_REVOCATION_CHECK_CACHE_ONLY |
                         winapi::CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT;
@@ -548,9 +544,9 @@ impl<S> TlsStream<S>
             let mut identifiers = [szOID_PKIX_KP_SERVER_AUTH.as_ptr() as winapi::LPSTR,
                                    szOID_SERVER_GATED_CRYPTO.as_ptr() as winapi::LPSTR,
                                    szOID_SGC_NETSCAPE.as_ptr() as winapi::LPSTR];
+
             para.RequestedUsage.Usage.cUsageIdentifier = identifiers.len() as winapi::DWORD;
             para.RequestedUsage.Usage.rgpszUsageIdentifier = identifiers.as_mut_ptr();
-
             let mut cert_chain = mem::zeroed();
 
             let res = crypt32::CertGetCertificateChain(ptr::null_mut(),
